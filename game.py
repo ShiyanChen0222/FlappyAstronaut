@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import os
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -30,20 +31,50 @@ fireImg = pygame.image.load("images/fire.png")
 pipeImg = pygame.image.load("images/pipe.png")
 font = pygame.font.Font("fonts/menu.TTF", 32)
 largeFont = pygame.font.Font("fonts/menu.TTF", 64)
-
+smallFont = pygame.font.Font("fonts/menu.TTF", 28)
 
 # variables
 UP_FORCE = 8.5
 GRAVITY = 0.9
 PIPE_SPEED = 8.0
 PIPE_INTERVAL = 1500
-FONT_COLOR = (255, 255, 255)
+COLOR_WHITE = (255, 255, 255)
+COLOR_RED = (255, 100, 100)
+COLOR_YELLOW = (255, 255, 200)
+COLOR_BLUE = (50, 255, 255)
 SCORE_STEP = 50
 BACKGROUND_UPGRADE_STEP = SCORE_STEP * 5
 BACKGROUND_INTERVAL_FRAMES = 5
+DATA_FILE = "data/highest_score.txt"
 
-score = 0
-highestScore = 0
+
+class Background:
+    def __init__(self):
+        self.movement = 0
+        self.backgroundImg = bgImgs
+        self.row = 0
+        self.col = 0
+        self.interval = BACKGROUND_INTERVAL_FRAMES
+        self.upgradeFlag = False
+
+    def render(self):
+        self.movement -= 2
+        if self.movement <= -1164:
+            self.movement = 0
+        screen.blit(self.backgroundImg[self.row][int(self.col)], (self.movement, 0))
+        screen.blit(self.backgroundImg[self.row][int(self.col)], (self.movement + 1164, 0))
+
+    def upgrade_background(self):
+        if self.upgradeFlag:
+            self.col += (1 / self.interval)
+            if self.col % 4 < 0.01:
+                self.col = 0
+                self.row = (self.row + 1) % 3
+                self.upgradeFlag = False
+
+    def trigger_upgrade(self):
+        if get_score() % BACKGROUND_UPGRADE_STEP == 0:
+            self.upgradeFlag = True
 
 
 class Player:
@@ -74,7 +105,6 @@ class Pipes:
         self.topImg = pygame.transform.flip(self.bottomImg, False, True)
 
     def create(self):
-        global score
         gap = random.randint(120, 250)
         top = random.randint(0, 300)
         bottom = top + gap
@@ -92,36 +122,6 @@ class Pipes:
                 screen.blit(self.topImg, pipe[0])
 
 
-class Background:
-    def __init__(self):
-        self.movement = 0
-        self.backgroundImg = bgImgs
-        self.row = 0
-        self.col = 0
-        self.interval = BACKGROUND_INTERVAL_FRAMES
-        self.upgradeFlag = False
-
-    def render(self):
-        self.movement -= 2
-        if self.movement <= -1164:
-            self.movement = 0
-        screen.blit(self.backgroundImg[self.row][int(self.col)], (self.movement, 0))
-        screen.blit(self.backgroundImg[self.row][int(self.col)], (self.movement + 1164, 0))
-
-    def upgrade_background(self):
-        if self.upgradeFlag:
-            self.col += (1 / self.interval)
-            print(self.col)
-            if self.col % 4 < 0.01:
-                self.col = 0
-                self.row = (self.row + 1) % 3
-                self.upgradeFlag = False
-
-    def trigger_upgrade(self):
-        if get_score() % BACKGROUND_UPGRADE_STEP == 0:
-            self.upgradeFlag = True
-
-
 def check_collision(avatar, objects):
     if avatar.y <= -40 or avatar.y >= SCREEN_HEIGHT + 40:
         return True
@@ -136,43 +136,75 @@ def get_score():
 
 
 def render_menu():
-    title = largeFont.render("FLAPPY ASTRONAUT", True, FONT_COLOR)
+    title = largeFont.render("FLAPPY ASTRONAUT", True, COLOR_BLUE)
+    titleRect = title.get_rect(center=(504, 179))
+    screen.blit(title, titleRect)
+    title = largeFont.render("FLAPPY ASTRONAUT", True, COLOR_RED)
     titleRect = title.get_rect(center=(500, 175))
     screen.blit(title, titleRect)
-    startText = font.render("START (PRESS S)", True, FONT_COLOR)
-    startTextRect = startText.get_rect(center=(500, 275))
-    quitText = font.render("QUIT (PRESS Q)", True, FONT_COLOR)
-    quitTextRect = quitText.get_rect(center=(500, 325))
+    startText = font.render(">>>>> PRESS SPACE TO JUMP <<<<<", True, COLOR_WHITE)
+    startTextRect = startText.get_rect(center=(500, 240))
     screen.blit(startText, startTextRect)
+    startText = smallFont.render("START (PRESS S)", True, COLOR_YELLOW)
+    startTextRect = startText.get_rect(center=(500, 325))
+    screen.blit(startText, startTextRect)
+    quitText = smallFont.render("QUIT (PRESS Q)", True, COLOR_YELLOW)
+    quitTextRect = quitText.get_rect(center=(500, 370))
     screen.blit(quitText, quitTextRect)
 
 
 def render_header():
-    startText = font.render("SCORE: " + str(get_score()), True, FONT_COLOR)
+    startText = font.render("SCORE: " + str(get_score()), True, COLOR_WHITE)
     startTextRect = startText.get_rect(topleft=(15, 10))
     screen.blit(startText, startTextRect)
 
 
 def render_endpage():
-    global highestScore
-    highestScore = max(highestScore, get_score())
-    scoreText = largeFont.render("YOUR SCORE: " + str(get_score()), True, FONT_COLOR)
+    if newRecord:
+        scoreText = largeFont.render("NEW RECORD: " + str(get_score()), True, COLOR_WHITE)
+        scoreTextRect = scoreText.get_rect(center=(504, 154))
+        screen.blit(scoreText, scoreTextRect)
+        scoreText = largeFont.render("NEW RECORD: " + str(get_score()), True, COLOR_RED)
+        scoreTextRect = scoreText.get_rect(center=(500, 150))
+        screen.blit(scoreText, scoreTextRect)
+    else:
+        scoreText = largeFont.render("YOUR SCORE: " + str(get_score()), True, COLOR_WHITE)
+        scoreTextRect = scoreText.get_rect(center=(504, 154))
+        screen.blit(scoreText, scoreTextRect)
+        scoreText = largeFont.render("YOUR SCORE: " + str(get_score()), True, COLOR_BLUE)
+        scoreTextRect = scoreText.get_rect(center=(500, 150))
+        screen.blit(scoreText, scoreTextRect)
     scoreTextRect = scoreText.get_rect(center=(500, 150))
     screen.blit(scoreText, scoreTextRect)
-    highestScoreText = font.render("HIGHEST SCORE: " + str(highestScore), True, FONT_COLOR)
+    highestScoreText = font.render("HIGHEST SCORE: " + str(highestScore) + " (RESET R)", True, COLOR_YELLOW)
     highestScoreTextRect = highestScoreText.get_rect(center=(500, 250))
     screen.blit(highestScoreText, highestScoreTextRect)
-    startText = font.render("RESTART (PRESS S)", True, FONT_COLOR)
+    startText = font.render("RESTART (PRESS S)", True, COLOR_WHITE)
     startTextRect = startText.get_rect(center=(500, 300))
     screen.blit(startText, startTextRect)
-    quitText = font.render("QUIT (PRESS Q)", True, FONT_COLOR)
+    quitText = font.render("QUIT (PRESS Q)", True, COLOR_WHITE)
     quitTextRect = quitText.get_rect(center=(500, 350))
     screen.blit(quitText, quitTextRect)
+
+
+def save_highest_score():
+    with open(DATA_FILE, "w") as fout:
+        fout.write(str(highestScore))
+
+
+def read_highest_score():
+    if os.path.exists(DATA_FILE) and os.path.getsize(DATA_FILE):
+        with open(DATA_FILE) as fin:
+            return int(fin.read())
+    return 0
 
 
 gameStart = False
 gamePrepare = False
 gameOver = False
+newRecord = False
+score = 0
+highestScore = read_highest_score()
 fireDelay = 0
 background = Background()
 player = None
@@ -180,6 +212,7 @@ pipes = None
 PIPE_TIMER = pygame.USEREVENT
 BACKGROUND_TIMER = pygame.USEREVENT + 1
 pygame.time.set_timer(PIPE_TIMER, PIPE_INTERVAL)
+
 
 # game loop
 while True:
@@ -199,6 +232,10 @@ while True:
             gameOver = True
             player = None
             pipes = None
+            if get_score() > highestScore:
+                highestScore = get_score()
+                newRecord = True
+            save_highest_score()
     else:
         render_endpage()
 
@@ -215,6 +252,7 @@ while True:
                 if event.key == pygame.K_s:
                     gameStart = True
                     gamePrepare = True
+                    newRecord = False
                     background = Background()
                     player = Player()
                     pipes = Pipes()
@@ -230,10 +268,15 @@ while True:
                 if event.key == pygame.K_s:
                     gameOver = False
                     gamePrepare = True
+                    newRecord = False
                     score = 0
                     background = Background()
                     player = Player()
                     pipes = Pipes()
+                if event.key == pygame.K_r:
+                    score = 0
+                    highestScore = 0
+                    save_highest_score()
         elif event.type == PIPE_TIMER and gameStart and not gameOver:
             pipes.create()
             score += SCORE_STEP
