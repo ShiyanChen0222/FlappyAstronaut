@@ -8,7 +8,7 @@ clock = pygame.time.Clock()
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 500
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Flappy Bird")
+pygame.display.set_caption("Flappy Astronaut")
 
 # load images and fonts
 bgImg1 = pygame.image.load("images/background1.png")
@@ -32,6 +32,7 @@ pipeImg = pygame.image.load("images/pipe.png")
 font = pygame.font.Font("fonts/menu.TTF", 32)
 largeFont = pygame.font.Font("fonts/menu.TTF", 64)
 smallFont = pygame.font.Font("fonts/menu.TTF", 28)
+DATA_FILE = "data/highest_score.txt"
 
 # variables
 UP_FORCE = 8.5
@@ -43,9 +44,8 @@ COLOR_RED = (255, 100, 100)
 COLOR_YELLOW = (255, 255, 200)
 COLOR_BLUE = (50, 255, 255)
 SCORE_STEP = 50
-BACKGROUND_UPGRADE_STEP = SCORE_STEP * 5
+BACKGROUND_UPGRADE_STEP = SCORE_STEP * 10
 BACKGROUND_INTERVAL_FRAMES = 5
-DATA_FILE = "data/highest_score.txt"
 
 
 class Background:
@@ -135,6 +135,18 @@ def get_score():
     return max(0, score - SCORE_STEP)
 
 
+def save_highest_score():
+    with open(DATA_FILE, "w") as fout:
+        fout.write(str(highestScore))
+
+
+def read_highest_score():
+    if os.path.exists(DATA_FILE) and os.path.getsize(DATA_FILE):
+        with open(DATA_FILE) as fin:
+            return int(fin.read())
+    return 0
+
+
 def render_menu():
     title = largeFont.render("FLAPPY ASTRONAUT", True, COLOR_BLUE)
     titleRect = title.get_rect(center=(504, 179))
@@ -185,18 +197,6 @@ def render_endpage():
     quitText = font.render("QUIT (PRESS Q)", True, COLOR_WHITE)
     quitTextRect = quitText.get_rect(center=(500, 350))
     screen.blit(quitText, quitTextRect)
-
-
-def save_highest_score():
-    with open(DATA_FILE, "w") as fout:
-        fout.write(str(highestScore))
-
-
-def read_highest_score():
-    if os.path.exists(DATA_FILE) and os.path.getsize(DATA_FILE):
-        with open(DATA_FILE) as fin:
-            return int(fin.read())
-    return 0
 
 
 gameStart = False
