@@ -1,0 +1,5 @@
+**/__pycache__
+*.psd
+*.txt
+.DS_Store
+.idea/
