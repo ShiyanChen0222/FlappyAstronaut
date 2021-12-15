@@ -3,6 +3,7 @@ import sys
 import random
 import os
 
+# initiate pygame
 pygame.init()
 clock = pygame.time.Clock()
 SCREEN_WIDTH = 1000
@@ -34,7 +35,7 @@ largeFont = pygame.font.Font("fonts/menu.TTF", 64)
 smallFont = pygame.font.Font("fonts/menu.TTF", 28)
 DATA_FILE = "data/highest_score.txt"
 
-# variables
+# constant
 UP_FORCE = 8.5
 GRAVITY = 0.9
 PIPE_SPEED = 8.0
@@ -46,6 +47,11 @@ COLOR_BLUE = (50, 255, 255)
 SCORE_STEP = 50
 BACKGROUND_UPGRADE_STEP = SCORE_STEP * 10
 BACKGROUND_INTERVAL_FRAMES = 5
+
+# game variables
+newRecord = False
+score = 0
+highestScore = 0
 
 
 class Background:
@@ -93,6 +99,9 @@ class Player:
         self.rect.centery = self.y
         screen.blit(self.img, self.rect)
 
+    def move_upward(self):
+        self.movement = -UP_FORCE
+
     def eject_fire(self):
         self.fireRect.centery = self.y + 20
         screen.blit(self.fire, self.fireRect)
@@ -123,6 +132,12 @@ class Pipes:
 
 
 def check_collision(avatar, objects):
+    """
+    check if avatar collides with objects or screen boundary
+    :param avatar: Player object
+    :param objects: Pipes object
+    :return: None
+    """
     if avatar.y <= -40 or avatar.y >= SCREEN_HEIGHT + 40:
         return True
     for obj in objects.pipes:
@@ -132,15 +147,27 @@ def check_collision(avatar, objects):
 
 
 def get_score():
+    """
+    get current score of the player
+    :return: int
+    """
     return max(0, score - SCORE_STEP)
 
 
 def save_highest_score():
+    """
+    save the highest score into the DATA_FILE ("data/highest_score.txt")
+    :return: None
+    """
     with open(DATA_FILE, "w") as fout:
         fout.write(str(highestScore))
 
 
 def read_highest_score():
+    """
+    read the highest score from the DATA_FILE ("data/highest_score.txt")
+    :return:
+    """
     if os.path.exists(DATA_FILE) and os.path.getsize(DATA_FILE):
         with open(DATA_FILE) as fin:
             return int(fin.read())
@@ -148,6 +175,10 @@ def read_highest_score():
 
 
 def render_menu():
+    """
+    render text of the menu page before the game start
+    :return: None
+    """
     title = largeFont.render("FLAPPY ASTRONAUT", True, COLOR_BLUE)
     titleRect = title.get_rect(center=(504, 179))
     screen.blit(title, titleRect)
@@ -166,12 +197,20 @@ def render_menu():
 
 
 def render_header():
+    """
+    render score as the header of the playground when game started
+    :return: None
+    """
     startText = font.render("SCORE: " + str(get_score()), True, COLOR_WHITE)
     startTextRect = startText.get_rect(topleft=(15, 10))
     screen.blit(startText, startTextRect)
 
 
 def render_endpage():
+    """
+    render the text of the end page after game is over
+    :return: None
+    """
     if newRecord:
         scoreText = largeFont.render("NEW RECORD: " + str(get_score()), True, COLOR_WHITE)
         scoreTextRect = scoreText.get_rect(center=(504, 154))
@@ -199,90 +238,91 @@ def render_endpage():
     screen.blit(quitText, quitTextRect)
 
 
-gameStart = False
-gamePrepare = False
-gameOver = False
-newRecord = False
-score = 0
-highestScore = read_highest_score()
-fireDelay = 0
-background = Background()
-player = None
-pipes = None
-PIPE_TIMER = pygame.USEREVENT
-BACKGROUND_TIMER = pygame.USEREVENT + 1
-pygame.time.set_timer(PIPE_TIMER, PIPE_INTERVAL)
+def main():
+    global newRecord, score, highestScore
+    highestScore = read_highest_score()
+    gameStart = False
+    gamePrepare = False
+    gameOver = False
+    fireDelay = 0
+    background = Background()
+    player = None
+    pipes = None
+    PIPE_TIMER = pygame.USEREVENT
+    pygame.time.set_timer(PIPE_TIMER, PIPE_INTERVAL)
 
-
-# game loop
-while True:
-    background.render()
-    if not gameStart:
-        render_menu()
-    elif not gameOver:
-        if fireDelay > 0:
-            player.eject_fire()
-            fireDelay -= 1
-        player.render()
-        pipes.render()
-        render_header()
-        if not gamePrepare:
-            background.upgrade_background()
-        if check_collision(player, pipes):
-            gameOver = True
-            player = None
-            pipes = None
-            if get_score() > highestScore:
-                highestScore = get_score()
-                newRecord = True
-            save_highest_score()
-    else:
-        render_endpage()
-
-    # event loop
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == pygame.KEYDOWN:
-            if not gameStart:
-                if event.key == pygame.K_q:
-                    pygame.quit()
-                    sys.exit()
-                if event.key == pygame.K_s:
-                    gameStart = True
-                    gamePrepare = True
-                    newRecord = False
-                    background = Background()
-                    player = Player()
-                    pipes = Pipes()
-            elif not gameOver:
-                if event.key == pygame.K_SPACE:
-                    player.movement = 0
-                    player.movement -= UP_FORCE
-                    fireDelay = 10
-            else:
-                if event.key == pygame.K_q:
-                    pygame.quit()
-                    sys.exit()
-                if event.key == pygame.K_s:
-                    gameOver = False
-                    gamePrepare = True
-                    newRecord = False
-                    score = 0
-                    background = Background()
-                    player = Player()
-                    pipes = Pipes()
-                if event.key == pygame.K_r:
-                    score = 0
-                    highestScore = 0
-                    save_highest_score()
-        elif event.type == PIPE_TIMER and gameStart and not gameOver:
-            pipes.create()
-            score += SCORE_STEP
+    # game loop
+    while True:
+        background.render()
+        if not gameStart:
+            render_menu()
+        elif not gameOver:
+            if fireDelay > 0:
+                player.eject_fire()
+                fireDelay -= 1
+            player.render()
+            pipes.render()
+            render_header()
             if not gamePrepare:
-                background.trigger_upgrade()
-            gamePrepare = False
+                background.upgrade_background()
+            if check_collision(player, pipes):
+                gameOver = True
+                player = None
+                pipes = None
+                if get_score() > highestScore:
+                    highestScore = get_score()
+                    newRecord = True
+                save_highest_score()
+        else:
+            render_endpage()
 
-    pygame.display.update()
-    clock.tick(120)
+        # event loop
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if not gameStart:
+                    if event.key == pygame.K_q:
+                        pygame.quit()
+                        sys.exit()
+                    if event.key == pygame.K_s:
+                        gameStart = True
+                        gamePrepare = True
+                        newRecord = False
+                        background = Background()
+                        player = Player()
+                        pipes = Pipes()
+                elif not gameOver:
+                    if event.key == pygame.K_SPACE:
+                        player.move_upward()
+                        fireDelay = 10
+                else:
+                    if event.key == pygame.K_q:
+                        pygame.quit()
+                        sys.exit()
+                    if event.key == pygame.K_s:
+                        gameOver = False
+                        gamePrepare = True
+                        newRecord = False
+                        score = 0
+                        background = Background()
+                        player = Player()
+                        pipes = Pipes()
+                    if event.key == pygame.K_r:
+                        score = 0
+                        highestScore = 0
+                        save_highest_score()
+            elif event.type == PIPE_TIMER and gameStart and not gameOver:
+                pipes.create()
+                score += SCORE_STEP
+                if not gamePrepare:
+                    background.trigger_upgrade()
+                gamePrepare = False
+
+        pygame.display.update()
+        clock.tick(120)
+
+
+if __name__ == "__main__":
+    main()
